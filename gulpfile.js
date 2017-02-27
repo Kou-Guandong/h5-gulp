@@ -2,11 +2,12 @@ require('dotenv').config({silent: true});
 const path = require('path');
 const del = require('del');
 const gulp = require('gulp');
-// const plumber = require('gulp-plumber');
+const concat = require('gulp-concat');
 const eslint = require('gulp-eslint');
 const cssnano = require('gulp-cssnano');
 const babel = require('gulp-babel');
 const uglify = require('gulp-uglify');
+const sourcemaps = require('gulp-sourcemaps');
 const minifyHtml = require('gulp-htmlmin');
 const postcss = require('gulp-postcss');
 const autoprefixer = require('autoprefixer');
@@ -48,7 +49,7 @@ gulp.task('sass', () => {
       .pipe(rev.manifest({
         merge: true
       }))
-      .pipe(gulp.dest('dist/rev/'));
+      .pipe(gulp.dest('dist/rev/sass'));
   }
   return stream;
 });
@@ -61,13 +62,15 @@ gulp.task('jshint', () => {
     }))
     .pipe(gulp.dest('src/js'));
   if (isProd) {
-    stream.pipe(uglify())
+    stream.pipe(sourcemaps.init())
+      // .pipe(concat('concat.js'))
+      .pipe(uglify())
       .pipe(rev())
       .pipe(gulp.dest('dist/js'))
       .pipe(rev.manifest({
         merge: true
       }))
-      .pipe(gulp.dest('dist/rev/'));
+      .pipe(gulp.dest('dist/rev/js'));
   }
 });
 
@@ -81,23 +84,22 @@ gulp.task('browserSync', function () {
 });
 
 // Watch Files For Changes
-gulp.task('watch', ['browserSync', 'sass', 'jshint'], function () {
+gulp.task('watch', ['browserSync', 'html', 'sass', 'jshint'], function () {
   gulp.watch(['src/**/*.js']).on('change', browserSync.reload);
   gulp.watch(['src/**/*.html']).on('change', browserSync.reload);
   gulp.watch('src/scss/*.scss', ['sass']);
 });
 
 // run dev build sequence
-gulp.task('dev', function (callback) {
+gulp.task('dev', (callback) => {
   runSequence(
     ['watch', 'sass', 'jshint', 'browserSync'],
     callback
   )
 });
-gulp.task('default', function () {
+gulp.task('default', () => {
   runSequence('dev');
 });
-
 
 gulp.task('browser-sync', ['watch'], () => {
   browserSync.init({
@@ -108,37 +110,25 @@ gulp.task('browser-sync', ['watch'], () => {
   });
 });
 
-// minify images
-gulp.task('images', function () {
-  let stream = gulp.src(['src/assets/**/*.+(png|jpg|jpeg|gif|svg)'])
-    .pipe(gulp.dest('dist/assets'));
-});
-
 // copy html and common resources to dist
-gulp.task('copy', () => {
+gulp.task('copyAssets', () => {
   return gulp.src([
-    'src/index.html',
+    'src/**/*.html',
     'src/assets/**',
   ], {base: 'src'})
     .pipe(gulp.dest(DIST));
 });
 
 // update all file names with md5-suffixed ones
-gulp.task('rev', function () {
-  return streamqueue({objectMode: true},
-    // 更新html中引用的所有资源的路径
+gulp.task('rev',  () => {
+  let stream = streamqueue({objectMode: true},
     gulp.src(['dist/rev/**/*.json', 'dist/*.html'])
       .pipe(revCollector({replaceReved: true}))
-      .pipe(gulp.dest('dist/'))
-    // 更新css中引用的图片的路径
-    /*gulp.src(['dist/rev/images/!*.json', 'dist/css/!*.css'])
-     .pipe(revCollector({replaceReved: true}))
-     .pipe(gulp.dest('dist/css/'))*/
-  )
+      .pipe(gulp.dest('dist/')));
 });
 
-gulp.task('minifyhtml', () => {
-  let stream = gulp.src('src/pages/*.html', {base: 'src'})
+gulp.task('html', () => {
+  let stream = gulp.src('src/*.html', {base: 'src'})
     .pipe(assetsInjector.inject({
       link(html, asset) {
         return '/' + path.relative('src', asset);
@@ -158,17 +148,10 @@ gulp.task('minifyhtml', () => {
     .pipe(gulp.dest(DIST));
 });
 
-// Watch Files For Changes
-gulp.task('watch-prod', ['browserSync-prod'], function () {
-  gulp.watch(['src/js/*.js']).on('change', browserSync.reload);
-  gulp.watch(["src/**/*.html"]).on('change', browserSync.reload);
-  gulp.watch('src/scss/*.scss', ['sass']);
-});
-
 
 gulp.task('prod', function (callback) {
   runSequence(
-    'clean', ['minifyhtml', 'jshint', 'sass', 'images', 'copy'], 'rev',
+    'clean', ['jshint', 'sass', 'copyAssets'], 'rev', 'browserSync',
     callback
   )
 });
