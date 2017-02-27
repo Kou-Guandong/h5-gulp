@@ -73,7 +73,7 @@ gulp.task('jshint', () => {
 });
 
 // synchronize browser
-gulp.task('browserSync', function () {
+gulp.task('browserSync', () => {
   browserSync.init({
     server: {
       baseDir: serverPath
