@@ -17,7 +17,7 @@ const sass = require('gulp-sass');
 const runSequence = require('run-sequence');
 const rev = require('gulp-rev');
 const streamqueue = require('streamqueue');
-var revCollector = require('gulp-rev-collector'); //- 路径替换
+var revCollector = require('gulp-rev-collector');
 var revReplace = require('gulp-rev-replace');
 
 // Config Environment
@@ -51,7 +51,6 @@ gulp.task('sass', () => {
       }))
       .pipe(gulp.dest('dist/rev/sass'));
   }
-  return stream;
 });
 
 // inspect JS
@@ -63,7 +62,6 @@ gulp.task('jshint', () => {
     .pipe(gulp.dest('src/js'));
   if (isProd) {
     stream.pipe(sourcemaps.init())
-      // .pipe(concat('concat.js'))
       .pipe(uglify())
       .pipe(rev())
       .pipe(gulp.dest('dist/js'))
@@ -127,6 +125,7 @@ gulp.task('rev',  () => {
       .pipe(gulp.dest('dist/')));
 });
 
+// optimize html (currently not in use)
 gulp.task('html', () => {
   let stream = gulp.src('src/*.html', {base: 'src'})
     .pipe(assetsInjector.inject({
